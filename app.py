@@ -8,12 +8,13 @@ import tempfile
 import os
 
 # Configure Gemini API
-GOOGLE_API_KEY = "AIzaSyCC8Me5ZHBVBEuI3OZkoSZUF9sykvETxa8"  # Replace with your API key
+GOOGLE_API_KEY = "AIzaSyCC8Me5ZHBVBEuI3OZkoSZUF9sykvETxa8"
 genai.configure(api_key=GOOGLE_API_KEY)
 
 class StoryGenerator:
-    def __init__(self):
-        self.model = genai.GenerativeModel('gemini-1.5 flash')
+    def __init__(self):  # Corrected from _init_ to __init__
+        # Use the correct model for vision tasks
+        self.model = genai.GenerativeModel('gemini-1.5-flash')
         self.language_map = {
             "telugu": "te",
             "hindi": "hi",
@@ -24,6 +25,11 @@ class StoryGenerator:
 
     def generate_caption_and_story(self, image):
         try:
+            # Convert PIL Image to bytes
+            img_byte_arr = io.BytesIO()
+            image.save(img_byte_arr, format='PNG')
+            img_byte_arr = img_byte_arr.getvalue()
+
             prompt = """
             1. First, describe what you see in this image in one sentence.
             2. Then, create an engaging children's story (200-300 words) based on what you see.
@@ -35,7 +41,13 @@ class StoryGenerator:
             Story: [your story]
             """
 
-            response = self.model.generate_content([prompt, image])
+            # Create image part for the model
+            image_part = {
+                "mime_type": "image/jpeg",
+                "data": img_byte_arr
+            }
+
+            response = self.model.generate_content([prompt, image_part])
             response_text = response.text
 
             try:
@@ -79,12 +91,9 @@ class StoryGenerator:
 
     def process_image(self, image_file, language_choice=None):
         try:
-            # Open and display the image
             image = Image.open(image_file)
-            # Updated parameter from use_column_width to use_container_width
-            st.image(image, caption='Uploaded Image', use_container_width=True)
+            st.image(image, caption='Uploaded Image', use_container_width=True)  # Updated parameter
 
-            # Generate caption and story
             with st.spinner('Generating caption and story...'):
                 caption, story = self.generate_caption_and_story(image)
                 
@@ -96,14 +105,12 @@ class StoryGenerator:
                     st.write("### Story in English")
                     st.write(story)
 
-                    # Generate English audio
                     with st.spinner('Generating English audio...'):
                         english_audio = self.text_to_speech(story, 'en')
                         if english_audio:
                             st.write("### English Audio")
                             st.audio(english_audio)
 
-            # Handle translation if language is selected
             if language_choice and language_choice.lower() in self.language_map:
                 target_language = self.language_map[language_choice.lower()]
                 
@@ -114,7 +121,6 @@ class StoryGenerator:
                         st.write(f"### Story in {language_choice}")
                         st.write(translated_text)
                         
-                        # Generate translated audio
                         with st.spinner(f'Generating {language_choice} audio...'):
                             translated_audio = self.text_to_speech(translated_text, target_language)
                             if translated_audio:
@@ -137,18 +143,14 @@ def main():
     st.title("📚 Image Story Generator")
     st.write("Upload an image to generate a story in multiple languages!")
 
-    # Initialize generator
     generator = StoryGenerator()
 
-    # Create columns for better layout
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        # File uploader
         image_file = st.file_uploader("Choose an image...", type=['png', 'jpg', 'jpeg'])
     
     with col2:
-        # Language selector
         language_choice = st.selectbox(
             "Select language for translation",
             ["None"] + list(generator.language_map.keys())
@@ -159,7 +161,6 @@ def main():
             if language_choice == "None":
                 language_choice = None
                 
-            # Process the image
             generator.process_image(image_file, language_choice)
 
             # Cleanup temporary files
@@ -170,7 +171,6 @@ def main():
                     except:
                         pass
 
-    # Add footer
     st.markdown("---")
     st.markdown(
         """
@@ -181,5 +181,5 @@ def main():
         unsafe_allow_html=True
     )
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # Corrected from _name_ to __name__
     main()
