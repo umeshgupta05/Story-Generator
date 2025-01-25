@@ -12,8 +12,7 @@ GOOGLE_API_KEY = "AIzaSyCC8Me5ZHBVBEuI3OZkoSZUF9sykvETxa8"
 genai.configure(api_key=GOOGLE_API_KEY)
 
 class StoryGenerator:
-    def __init__(self):  # Corrected from _init_ to __init__
-        # Use the correct model for vision tasks
+    def __init__(self):
         self.model = genai.GenerativeModel('gemini-1.5-flash')
         self.language_map = {
             "telugu": "te",
@@ -92,7 +91,8 @@ class StoryGenerator:
     def process_image(self, image_file, language_choice=None):
         try:
             image = Image.open(image_file)
-            st.image(image, caption='Uploaded Image', use_container_width=True)  # Updated parameter
+            # Corrected image display parameter
+            st.image(image, caption='Uploaded Image', width=None)
 
             with st.spinner('Generating caption and story...'):
                 caption, story = self.generate_caption_and_story(image)
@@ -181,5 +181,5 @@ def main():
         unsafe_allow_html=True
     )
 
-if __name__ == "__main__":  # Corrected from _name_ to __name__
+if __name__ == "__main__":
     main()
