@@ -6,28 +6,123 @@ from gtts import gTTS
 from deep_translator import GoogleTranslator
 import tempfile
 import os
+import time
+
+# Configure page
+st.set_page_config(
+    page_title="✨ Magic Story Generator ✨",
+    page_icon="🎨",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Custom CSS
+st.markdown("""
+    <style>
+    .main {
+        background-color: #f5f5f5;
+    }
+    .stButton>button {
+        background-color: #ff4b4b;
+        color: white;
+        border-radius: 20px;
+        padding: 0.5rem 2rem;
+        transition: all 0.3s ease;
+    }
+    .stButton>button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    .story-container {
+        background-color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        margin: 1rem 0;
+        animation: fadeIn 0.5s ease-in;
+    }
+    .caption-text {
+        font-size: 1.2rem;
+        color: #333;
+        font-style: italic;
+        margin-bottom: 1rem;
+    }
+    .language-selector {
+        background-color: white;
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .header-text {
+        background: linear-gradient(45deg, #ff4b4b, #ff9b9b);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-size: 3rem;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 2rem;
+        animation: fadeIn 1s ease-in;
+    }
+    .subheader {
+        color: #666;
+        text-align: center;
+        font-size: 1.2rem;
+        margin-bottom: 2rem;
+        animation: fadeIn 1.5s ease-in;
+    }
+    .upload-section {
+        background-color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        margin-bottom: 1rem;
+    }
+    .stAudio {
+        margin-top: 1rem;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .spinner {
+        text-align: center;
+        padding: 2rem;
+    }
+    .footer {
+        text-align: center;
+        padding: 2rem;
+        color: #666;
+        animation: fadeIn 2s ease-in;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 # Configure Gemini API
-GOOGLE_API_KEY = "AIzaSyCC8Me5ZHBVBEuI3OZkoSZUF9sykvETxa8"
+GOOGLE_API_KEY = "AIzaSyCC8Me5ZHBVBEuI3OZkoSZUF9sykvETxa8"  # Replace with your API key
 genai.configure(api_key=GOOGLE_API_KEY)
 
-class StoryGenerator:
+class EnhancedStoryGenerator:
     def __init__(self):
         self.model = genai.GenerativeModel('gemini-1.5-flash')
         self.language_map = {
-            "telugu": "te",
-            "hindi": "hi",
-            "tamil": "ta",
-            "kannada": "kn",
-            "malayalam": "ml"
+            "Telugu": "te",
+            "Hindi": "hi",
+            "Tamil": "ta",
+            "Kannada": "kn",
+            "Malayalam": "ml"
         }
 
     def generate_caption_and_story(self, image):
         try:
-            # Convert PIL Image to bytes
             img_byte_arr = io.BytesIO()
             image.save(img_byte_arr, format='PNG')
             img_byte_arr = img_byte_arr.getvalue()
+
+            image_part = {
+                "mime_type": "image/jpeg",
+                "data": img_byte_arr
+            }
 
             prompt = """
             1. First, describe what you see in this image in one sentence.
@@ -39,12 +134,6 @@ class StoryGenerator:
             
             Story: [your story]
             """
-
-            # Create image part for the model
-            image_part = {
-                "mime_type": "image/jpeg",
-                "data": img_byte_arr
-            }
 
             response = self.model.generate_content([prompt, image_part])
             response_text = response.text
@@ -90,92 +179,90 @@ class StoryGenerator:
 
     def process_image(self, image_file, language_choice=None):
         try:
-            image = Image.open(image_file)
-            # Corrected image display parameter
-            st.image(image, caption='Uploaded Image', width=None)
+            col1, col2 = st.columns([1, 2])
+            
+            with col1:
+                image = Image.open(image_file)
+                # Updated parameter from use_column_width to use_container_width
+                st.image(image, caption='✨ Your Magical Image ✨', use_container_width=True)
 
-            with st.spinner('Generating caption and story...'):
-                caption, story = self.generate_caption_and_story(image)
-                
-                if caption:
-                    st.write("### Generated Caption")
-                    st.write(caption)
-                
-                if story:
-                    st.write("### Story in English")
-                    st.write(story)
-
-                    with st.spinner('Generating English audio...'):
-                        english_audio = self.text_to_speech(story, 'en')
-                        if english_audio:
-                            st.write("### English Audio")
-                            st.audio(english_audio)
-
-            if language_choice and language_choice.lower() in self.language_map:
-                target_language = self.language_map[language_choice.lower()]
-                
-                with st.spinner(f'Translating to {language_choice}...'):
-                    translated_text = self.translate_text(story, target_language)
+            with col2:
+                with st.spinner('🌟 Creating magic...'):
+                    time.sleep(1)  # For effect
                     
-                    if translated_text:
-                        st.write(f"### Story in {language_choice}")
-                        st.write(translated_text)
+                    with st.container():
+                        st.markdown("<div class='story-container'>", unsafe_allow_html=True)
+                        caption, story = self.generate_caption_and_story(image)
                         
-                        with st.spinner(f'Generating {language_choice} audio...'):
-                            translated_audio = self.text_to_speech(translated_text, target_language)
-                            if translated_audio:
-                                st.write(f"### {language_choice} Audio")
-                                st.audio(translated_audio)
+                        if caption:
+                            st.markdown(f"<p class='caption-text'>📝 {caption}</p>", unsafe_allow_html=True)
+                        
+                        if story:
+                            st.markdown("### 📖 Your Magical Story")
+                            st.write(story)
+                            
+                            with st.expander("🎧 Listen to the Magic"):
+                                english_audio = self.text_to_speech(story, 'en')
+                                if english_audio:
+                                    st.audio(english_audio)
+                        st.markdown("</div>", unsafe_allow_html=True)
 
-            return caption, story
+            if language_choice and language_choice != "None":
+                with st.container():
+                    st.markdown("<div class='story-container'>", unsafe_allow_html=True)
+                    target_language = self.language_map[language_choice]
+                    
+                    with st.spinner(f'✨ Translating to {language_choice}...'):
+                        translated_text = self.translate_text(story, target_language)
+                        
+                        if translated_text:
+                            st.markdown(f"### 🌏 Story in {language_choice}")
+                            st.write(translated_text)
+                            
+                            with st.expander(f"🎧 Listen in {language_choice}"):
+                                translated_audio = self.text_to_speech(translated_text, target_language)
+                                if translated_audio:
+                                    st.audio(translated_audio)
+                    st.markdown("</div>", unsafe_allow_html=True)
 
         except Exception as e:
-            st.error(f"Error processing image: {str(e)}")
+            st.error(f"✨ Oops! Magic failed: {str(e)}")
             return None, None
 
 def main():
-    st.set_page_config(
-        page_title="Image Story Generator",
-        page_icon="📚",
-        layout="wide"
-    )
-    
-    st.title("📚 Image Story Generator")
-    st.write("Upload an image to generate a story in multiple languages!")
+    st.markdown("<h1 class='header-text'>✨ Magic Story Generator ✨</h1>", unsafe_allow_html=True)
+    st.markdown("<p class='subheader'>Transform your images into enchanting stories!</p>", unsafe_allow_html=True)
 
-    generator = StoryGenerator()
+    generator = EnhancedStoryGenerator()
 
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        image_file = st.file_uploader("Choose an image...", type=['png', 'jpg', 'jpeg'])
+        st.markdown("<div class='upload-section'>", unsafe_allow_html=True)
+        image_file = st.file_uploader("🖼️ Choose your magical image", type=['png', 'jpg', 'jpeg'])
+        st.markdown("</div>", unsafe_allow_html=True)
     
     with col2:
+        st.markdown("<div class='language-selector'>", unsafe_allow_html=True)
         language_choice = st.selectbox(
-            "Select language for translation",
+            "🌍 Choose your story's language",
             ["None"] + list(generator.language_map.keys())
         )
+        st.markdown("</div>", unsafe_allow_html=True)
 
     if image_file is not None:
-        if st.button("Generate Story", type="primary"):
+        if st.button("✨ Generate Magical Story ✨", type="primary"):
             if language_choice == "None":
                 language_choice = None
-                
-            generator.process_image(image_file, language_choice)
-
-            # Cleanup temporary files
-            for file in os.listdir():
-                if file.endswith('.mp3'):
-                    try:
-                        os.remove(file)
-                    except:
-                        pass
+            
+            with st.spinner('🪄 Casting the spell...'):
+                generator.process_image(image_file, language_choice)
 
     st.markdown("---")
     st.markdown(
         """
-        <div style='text-align: center'>
-            <p>Made with ❤️ using Streamlit and Gemini AI</p>
+        <div class='footer'>
+            <p>✨ Crafted with magic using Streamlit and Gemini AI ✨</p>
         </div>
         """,
         unsafe_allow_html=True
